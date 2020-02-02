@@ -67,11 +67,6 @@ static long           time_sync;
 #define GPS_DEV_SLOW_UPDATE_RATE (10)
 #define GPS_DEV_HIGH_UPDATE_RATE (1)
 
-static void gps_dev_init(int fd);
-static void gps_dev_deinit(int fd);
-//static void gps_dev_start(int fd);
-//static void gps_dev_stop(int fd);
-
 static void gps_dev_set_meas_rate(int fd, unsigned short period_ms);
 
 /*****************************************************************/
@@ -247,45 +242,16 @@ void update_gps_location(GpsLocation *fix)
         state->callbacks->location_cb(fix);
 }
 
-/*
-static void
-nmea_reader_update_utc_diff( NmeaReader*  r )
-{
-
-    time_t         now = time(NULL);
-    struct tm      tm_local;
-    struct tm      tm_utc;
-    long           time_local, time_utc;
-
-    gmtime_r( &now, &tm_utc );
-    localtime_r( &now, &tm_local );
-
-    time_local = tm_local.tm_sec +
-                 60*(tm_local.tm_min +
-                 60*(tm_local.tm_hour +
-                 24*(tm_local.tm_yday +
-                 365*tm_local.tm_year)));
-
-    time_utc = tm_utc.tm_sec +
-               60*(tm_utc.tm_min +
-               60*(tm_utc.tm_hour +
-               24*(tm_utc.tm_yday +
-               365*tm_utc.tm_year)));
-
-    r->utc_diff = time_utc - time_local;
-}
-*/
 
 #ifndef _USE_TIMEGM
-
 static time_t get_utc_diff()
 {
     // 3rd January, 1970, Time: 00:00:00
     static struct tm tm = { 0, 0, 0, 3, 0, 70, 0, 0, -1 };
     return (2 * 24 * 3600) - mktime(&tm);
 }
-
 #endif // _USE_TIMEGM
+
 
 static void
 nmea_reader_init( NmeaReader*  r )
@@ -302,18 +268,6 @@ nmea_reader_init( NmeaReader*  r )
     r->fix.size = sizeof(r->fix);
 
     //nmea_reader_update_utc_diff( r );
-}
-
-
-static void
-nmea_reader_set_callback( NmeaReader*  r, gps_location_callback  cb )
-{
-    r->callback = cb;
-    if (cb != NULL && r->fix.flags != 0) {
-        D("%s: sending latest fix to new callback", __FUNCTION__);
-        r->callback( &r->fix );
-        r->fix.flags = 0;
-    }
 }
 
 
@@ -456,6 +410,7 @@ nmea_reader_update_altitude( NmeaReader*  r,
     r->fix.altitude = str2float(tok.p, tok.end);
     return 0;
 }
+
 
 static int nmea_reader_update_accuracy(NmeaReader* r, Token accuracy, bool is_fix)
 {
@@ -880,17 +835,6 @@ epoll_register( int  epoll_fd, int  fd )
 }
 
 
-static int
-epoll_deregister( int  epoll_fd, int  fd )
-{
-    int  ret;
-    do {
-        ret = epoll_ctl( epoll_fd, EPOLL_CTL_DEL, fd, NULL );
-    } while (ret < 0 && errno == EINTR);
-    return ret;
-}
-
-
 /* this is the main thread, it waits for commands from gps_state_start/stop and,
  * when started, messages from the QEMU GPS daemon. these are simple NMEA sentences
  * that must be parsed to be converted into GPS fixes sent to the framework
@@ -1234,11 +1178,6 @@ const GpsInterface* gps_get_hardware_interface()
 /*****************************************************************/
 /*****************************************************************/
 
-static void gps_dev_power(int state)
-{
-    return;
-}
-
 static void gps_dev_send(int fd, char *msg, int size)
 {
     int n = 0;
@@ -1255,82 +1194,6 @@ static void gps_dev_send(int fd, char *msg, int size)
     } while (n < size);
 }
 
-//
-// Both following UBX commands 40 and 41 are proprietary and most of SatNav devices must not support them or must not recognize used format.
-// E.g. u-blox-5 chipset expects 5 rate parameters in UBX 40 command because it has 5 I/O ports.
-// In addition, UBX 40 command doesn't change fix computation frequency, so it cannot influence a power consumption of USB module.
-// But we can use another UBX command CFG-RATE which is probably supported by more devices and its format is clear.
-// CFG_RATE controls computation frequency and thus it influences a power consumption.
-//
-/*
-static unsigned char gps_dev_calc_nmea_csum(char *msg)
-{
-    unsigned char csum = 0;
-    int i;
-
-    for (i = 1; msg[i] != '*'; ++i) {
-        csum ^= msg[i];
-    }
-
-    return csum;
-}
-
-
-static void gps_dev_set_nmea_message_rate(int fd, char *msg, int rate)
-{
-    char buff[50];
-    int i;
-
-    sprintf(buff, "$PUBX,40,%s,%d,%d,%d,0*", msg, rate, rate, rate);
-
-    i = strlen(buff);
-
-    sprintf((buff + i), "%02x\r\n", gps_dev_calc_nmea_csum(buff));
-
-    gps_dev_send(fd, buff, strlen(buff));
-
-    D("GPS sent to device: %s", buff);
-}
-
-
-static void gps_dev_set_baud_rate(int fd, int baud)
-{
-    char buff[50];
-    int i, u;
-
-    for (u = 0; u < 3; ++u) {
-
-        sprintf(buff, "$PUBX,41,%d,0003,0003,%d,0*", u, baud);
-
-        i = strlen(buff);
-
-        sprintf((buff + i), "%02x\r\n", gps_dev_calc_nmea_csum(buff));
-
-        gps_dev_send(fd, buff, strlen(buff));
-
-        D("Sent to device: %s", buff);
-
-    }
-}
-
-
-static void gps_dev_set_message_rate(int fd, int rate)
-{
-
-    unsigned int i;
-
-    char *msg[] = {
-                     "GGA", "GLL", "VTG",
-                     "GSA", "GSV", "RMC"
-                  };
-
-    for (i = 0; i < sizeof(msg)/sizeof(msg[0]); ++i) {
-        gps_dev_set_nmea_message_rate(fd, msg[i], rate);
-    }
-
-    return;
-}
-*/
 
 static void gps_dev_calc_ubx_csum(unsigned char *msg, int size, unsigned char *ck_a, unsigned char *ck_b)
 {
@@ -1341,6 +1204,7 @@ static void gps_dev_calc_ubx_csum(unsigned char *msg, int size, unsigned char *c
         *ck_b += *ck_a;
     }
 }
+
 
 static void gps_dev_set_meas_rate(int fd, unsigned short period_ms)
 {
@@ -1356,37 +1220,6 @@ static void gps_dev_set_meas_rate(int fd, unsigned short period_ms)
     gps_dev_send(fd, (char *)buff, sizeof(buff));
 }
 
-static void gps_dev_init(int fd)
-{
-    gps_dev_power(1);
-
-    return;
-}
-
-
-static void gps_dev_deinit(int fd)
-{
-    gps_dev_power(0);
-}
-
-/*
-static void gps_dev_start(int fd)
-{
-    // Set full message rate
-    gps_dev_set_message_rate(fd, GPS_DEV_HIGH_UPDATE_RATE);
-
-    D("GPS dev start initiated");
-}
-
-
-static void gps_dev_stop(int fd)
-{
-    // Set slow message rate
-    gps_dev_set_message_rate(fd, GPS_DEV_SLOW_UPDATE_RATE);
-
-    D("GPS dev stop initiated");
-}
-*/
 
 static int open_gps(const struct hw_module_t* module, char const* name, struct hw_device_t** device)
 {
