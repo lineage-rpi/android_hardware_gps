@@ -67,8 +67,8 @@ static long           time_sync;
 #define GPS_DEV_SLOW_UPDATE_RATE (10)
 #define GPS_DEV_HIGH_UPDATE_RATE (1)
 
-extern bool gps_power_on();
-extern bool gps_power_off();
+static void gps_dev_init(int fd);
+static void gps_dev_deinit(int fd);
 //static void gps_dev_start(int fd);
 //static void gps_dev_stop(int fd);
 
@@ -836,8 +836,6 @@ gps_state_start( GpsState*  s )
     char  cmd = CMD_START;
     int   ret;
 
-    gps_power_on();
-
     do {
         ret = write( s->control[0], &cmd, 1 );
     } while (ret < 0 && errno == EINTR);
@@ -860,8 +858,6 @@ gps_state_stop( GpsState*  s )
     if (ret != 1)
         D("%s: could not send CMD_STOP command: ret=%d: %s",
           __FUNCTION__, ret, strerror(errno));
-
-    gps_power_off();
 }
 
 
@@ -1238,6 +1234,11 @@ const GpsInterface* gps_get_hardware_interface()
 /*****************************************************************/
 /*****************************************************************/
 
+static void gps_dev_power(int state)
+{
+    return;
+}
+
 static void gps_dev_send(int fd, char *msg, int size)
 {
     int n = 0;
@@ -1353,6 +1354,19 @@ static void gps_dev_set_meas_rate(int fd, unsigned short period_ms)
     gps_dev_calc_ubx_csum(buff + 2, 10, buff + 12, buff + 13);
 
     gps_dev_send(fd, (char *)buff, sizeof(buff));
+}
+
+static void gps_dev_init(int fd)
+{
+    gps_dev_power(1);
+
+    return;
+}
+
+
+static void gps_dev_deinit(int fd)
+{
+    gps_dev_power(0);
 }
 
 /*

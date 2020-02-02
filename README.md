@@ -18,8 +18,6 @@ and GPS time will grow over given threshold then system time will be set to GPS 
 Threshold should be set to some value from 20 to 60. If property is missing or its value is zero then time synchronization
 is turned off.
 
-To add power management for your target product, `cp power-stubs.c power-$(TARGET_PRODUCT).c` and fill in the stubs.
-
 Notes:
 * If using a USB device make sure you have the necessary kernel modules loaded or built in to the kernel.
 * Make sure the permissions on your device file are correct
