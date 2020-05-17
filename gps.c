@@ -500,6 +500,8 @@ nmea_reader_parse( NmeaReader*  r )
         return;
     }
 
+    r->in[r->pos] = 0;
+
     gettimeofday(&tv, NULL);
     if (_gps_state->init)
         _gps_state->callbacks->nmea_cb(tv.tv_sec*1000+tv.tv_usec/1000, r->in, r->pos);
