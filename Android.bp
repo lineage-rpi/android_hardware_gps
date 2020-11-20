@@ -5,6 +5,10 @@ cc_library_shared {
     relative_install_path: "hw",
     proprietary: true,
     srcs: ["gps.c"],
+    include_dirs: [
+        "hardware/libhardware/include",
+        "system/core/libsystem/include",
+    ],
     shared_libs: [
         "libcutils",
         "liblog",
