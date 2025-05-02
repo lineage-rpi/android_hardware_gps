@@ -21,9 +21,3 @@ is turned off.
 Notes:
 * If using a USB device make sure you have the necessary kernel modules loaded or built in to the kernel.
 * Make sure the permissions on your device file are correct
-
-Donate:
-If you find any of this useful and want to show appreciation see below:
-
-PayPal: keith.conger@gmail.com
-Bitcoin: 1Pg54vVnaLxNsziA6cy9CTefoEG5iAm9Uh
