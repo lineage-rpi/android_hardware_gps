@@ -1165,7 +1165,7 @@ static const GpsInterface  serialGpsInterface = {
 };
 
 
-const GpsInterface* gps_get_hardware_interface()
+const GpsInterface* gps_get_hardware_interface(struct gps_device_t* dev)
 {
     D("GPS dev get_hardware_interface");
     return &serialGpsInterface;
