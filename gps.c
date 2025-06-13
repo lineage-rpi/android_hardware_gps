@@ -947,7 +947,7 @@ gps_state_init( GpsState*  state, GpsCallbacks* callbacks )
     D("gps_state_init");
 
     // Look for a kernel-provided device name
-    if (property_get("ro.kernel.android.gps",prop,"") == 0) {
+    if (property_get("persist.vendor.gps.device", prop, "") == 0) {
         D("no kernel-provided gps device name");
         return;
     }
@@ -965,7 +965,7 @@ gps_state_init( GpsState*  state, GpsCallbacks* callbacks )
     D("GPS will read from %s", device);
 
     period_in_ms = GPS_DEV_HIGH_UPDATE_RATE * 1000;
-    if (property_get("ro.kernel.android.gps.max_rate", prop, "") != 0)
+    if (property_get("persist.vendor.gps.max_rate", prop, "") != 0)
     {
         unsigned long rate = strtoul(prop, NULL, 10);
         if (0 < rate && rate < 66)
@@ -977,7 +977,7 @@ gps_state_init( GpsState*  state, GpsCallbacks* callbacks )
     D("measure rate is set to %u ms", period_in_ms);
 
     time_sync = false;
-    if (property_get("ro.kernel.android.gps.time_sync", prop, "") != 0)
+    if (property_get("persist.vendor.gps.time_sync", prop, "") != 0)
     {
         time_sync = atol(prop);
     }
@@ -993,7 +993,7 @@ gps_state_init( GpsState*  state, GpsCallbacks* callbacks )
         ios.c_iflag &= (~(ICRNL | INLCR)); /* Stop \r -> \n & \n -> \r translation on input */
         ios.c_iflag |= (IGNCR | IXOFF);  /* Ignore \r & XON/XOFF on input */
         // Set baud rate and other flags
-        property_get("ro.kernel.android.gpsttybaud",prop,"9600");
+        property_get("persist.vendor.gps.ttybaud", prop, "9600");
         if (strcmp(prop, "4800") == 0) {
             ALOGE("Setting gps baud rate to 4800");
             ios.c_cflag = B4800 | CRTSCTS | CS8 | CLOCAL | CREAD;
